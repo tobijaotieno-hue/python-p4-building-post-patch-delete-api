@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-from flask import Flask, request, make_response
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, make_response, jsonify
 from flask_migrate import Migrate
 
-from models import db, User, Review, Game
+from models import db, Bakery, BakedGood
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
@@ -17,70 +16,36 @@ db.init_app(app)
 
 @app.route('/')
 def index():
-    return "Index for Game/Review/User API"
+    return '<h1>Bakery GET API</h1>'
 
-@app.route('/games')
-def games():
+@app.route('/bakeries', methods=["GET"])
+def bakeries():
+    bakeries= Bakery.query.all()
+    return jsonify([bakery.to_dict() for bakery in bakeries]), 200
 
-    games = []
-    for game in Game.query.all():
-        game_dict = {
-            "title": game.title,
-            "genre": game.genre,
-            "platform": game.platform,
-            "price": game.price,
-        }
-        games.append(game_dict)
 
-    response = make_response(
-        games,
-        200
-    )
+@app.route('/bakeries/<int:id>')
+def bakery_by_id(id):   
+    bakery = Bakery.query.get(id)
 
-    return response
+    if not bakery:
+        return jsonify({"error": "Bakery not found"}), 404
 
-@app.route('/games/<int:id>')
-def game_by_id(id):
-    game = Game.query.filter(Game.id == id).first()
-    
-    game_dict = game.to_dict()
+    return jsonify(bakery.to_dict()), 200
 
-    response = make_response(
-        game_dict,
-        200
-    )
+@app.route('/baked_goods/by_price')
+def baked_goods_by_price():
+    baked_goods = BakedGood.query.order_by(BakedGood.price.desc()).all()
+    return jsonify([bg.to_dict() for bg in baked_goods]), 200
 
-    return response
+@app.route('/baked_goods/most_expensive')
+def most_expensive_baked_good():
+    baked_good = BakedGood.query.order_by(BakedGood.price.desc()).first()
 
-@app.route('/reviews')
-def reviews():
+    if not baked_good:
+        return jsonify({"error": "No baked goods found"}), 404
 
-    reviews = []
-    for review in Review.query.all():
-        review_dict = review.to_dict()
-        reviews.append(review_dict)
-
-    response = make_response(
-        reviews,
-        200
-    )
-
-    return response
-
-@app.route('/users')
-def users():
-
-    users = []
-    for user in User.query.all():
-        user_dict = user.to_dict()
-        users.append(user_dict)
-
-    response = make_response(
-        users,
-        200
-    )
-
-    return response
+    return jsonify(baked_good.to_dict()), 200
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)
